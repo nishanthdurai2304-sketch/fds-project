@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Footfall — Smart Customer Analytics</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+.brand-icon{box-shadow:0 8px 24px rgba(37,99,235,.28)}
+.card,.panel{transition:transform .18s ease,box-shadow .18s ease}
+.card:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(15,23,42,.10)}
+.btn:active,.icon-btn:active{transform:scale(.97)}
+.connection-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:5px;box-shadow:0 0 0 4px rgba(34,197,94,.12)}
+.hero-note{padding:12px 14px;background:linear-gradient(135deg,#eff6ff,#f5f3ff);border:1px solid #dbeafe;border-radius:11px;color:#334155;font-size:12px;margin-bottom:14px}
+body.dark .hero-note{background:#172033;border-color:#263246;color:#cbd5e1}
+.live-pulse{animation:livePulse 1.8s infinite}
+@keyframes livePulse{0%,100%{opacity:1}50%{opacity:.45}}
+</style>
+
+<style>
+:root{
+  --bg:#f4f7fb;--surface:#fff;--surface2:#f8fafc;--text:#172033;--muted:#718096;
+  --border:#e5eaf1;--primary:#2563eb;--primary2:#3b82f6;--green:#16a34a;
+  --red:#ef4444;--orange:#f59e0b;--purple:#8b5cf6;--shadow:0 10px 30px rgba(15,23,42,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);transition:.25s}
+body.dark{--bg:#0b1120;--surface:#111827;--surface2:#172033;--text:#f1f5f9;--muted:#94a3b8;--border:#263246;--shadow:0 10px 30px rgba(0,0,0,.25)}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.app{display:flex;min-height:100vh}
+.sidebar{width:255px;background:#0d1526;color:#fff;padding:22px 15px;position:fixed;left:0;top:0;bottom:0;z-index:20;transition:.25s}
+.brand{display:flex;gap:11px;align-items:center;padding:8px 10px 28px}
+.brand-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#2563eb,#7c3aed);font-size:21px}
+.brand h2{font-size:18px}.brand small{color:#94a3b8;font-size:11px}
+.nav{display:grid;gap:6px}.nav button{border:0;background:transparent;color:#b9c3d4;padding:12px 13px;border-radius:10px;text-align:left;display:flex;align-items:center;gap:11px;font-size:14px}
+.nav button:hover,.nav button.active{background:#1d4ed8;color:#fff}
+.sidebar-bottom{position:absolute;bottom:20px;left:15px;right:15px;background:#121d31;border:1px solid #263246;border-radius:12px;padding:13px}
+.sidebar-bottom p{font-size:11px;color:#8fa0b8}.online{color:#4ade80;font-size:12px;margin-top:5px}
+.main{margin-left:255px;width:calc(100% - 255px);padding:24px 28px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;gap:15px}
+.title h1{font-size:25px}.title p{font-size:13px;color:var(--muted);margin-top:5px}
+.actions{display:flex;align-items:center;gap:9px}
+.icon-btn{width:40px;height:40px;border:1px solid var(--border);background:var(--surface);color:var(--text);border-radius:10px;display:grid;place-items:center}
+.status{padding:9px 12px;border-radius:999px;background:#dcfce7;color:#15803d;font-size:12px;font-weight:700}
+body.dark .status{background:#123321;color:#86efac}
+.page{display:none}.page.active{display:block}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.grid2{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card,.panel{background:var(--surface);border:1px solid var(--border);border-radius:15px;box-shadow:var(--shadow)}
+.card{padding:18px}
+.metric{display:flex;justify-content:space-between;align-items:flex-start}
+.metric .ico{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:#eff6ff;font-size:18px}
+body.dark .metric .ico{background:#172554}
+.metric p{color:var(--muted);font-size:12px}.metric h2{font-size:27px;margin:10px 0 3px}
+.delta{font-size:11px}.up{color:#16a34a}.down{color:#ef4444}
+.panel{padding:19px;margin-top:16px}.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}.panel h3{font-size:15px}.sub{font-size:11px;color:var(--muted)}
+canvas{max-height:300px}
+.camera-wrap{position:relative;height:390px;border-radius:13px;overflow:hidden;background:#101827}
+.camera-bg{position:absolute;inset:0;background:
+linear-gradient(180deg,rgba(30,41,59,.15),rgba(2,6,23,.7)),
+repeating-linear-gradient(90deg,transparent 0 90px,rgba(255,255,255,.025) 91px 92px)}
+.cam-header{position:absolute;top:13px;left:13px;right:13px;display:flex;justify-content:space-between;z-index:4}
+.badge{background:rgba(0,0,0,.65);color:#fff;padding:7px 10px;border-radius:7px;font-size:11px}
+.live-dot{color:#4ade80}
+.camera-controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+.btn{border:0;border-radius:9px;padding:10px 14px;font-size:12px;font-weight:700}
+.primary{background:var(--primary);color:#fff}.secondary{background:var(--surface2);border:1px solid var(--border);color:var(--text)}
+.danger{background:#fee2e2;color:#b91c1c}.select{padding:9px 11px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)}
+.stats4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.mini{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:13px}.mini span{display:block;color:var(--muted);font-size:10px}.mini strong{display:block;margin-top:5px;font-size:18px}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:13px 10px;border-bottom:1px solid var(--border);text-align:left}th{color:var(--muted);font-size:10px;text-transform:uppercase}
+.pill{padding:5px 8px;border-radius:999px;font-size:10px;font-weight:700}.pill.green{background:#dcfce7;color:#15803d}.pill.blue{background:#dbeafe;color:#1d4ed8}.pill.orange{background:#fef3c7;color:#b45309}
+.report-box{margin-top:18px}.empty{padding:35px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:10px}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.progress{height:7px;background:var(--surface2);border-radius:20px;overflow:hidden}.progress i{display:block;height:100%;background:linear-gradient(90deg,#2563eb,#7c3aed);border-radius:20px}
+.kpi-row{display:flex;justify-content:space-between;font-size:12px;margin:11px 0 6px}.kpi-row span:last-child{font-weight:700}
+.setting{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--border)}.setting:last-child{border:0}
+.setting p{font-size:13px}.setting small{display:block;color:var(--muted);margin-top:3px}
+.switch{width:42px;height:23px;border-radius:30px;background:#64748b;padding:3px;cursor:pointer}.switch i{display:block;width:17px;height:17px;background:#fff;border-radius:50%;transition:.2s}.switch.on{background:#2563eb}.switch.on i{transform:translateX(19px)}
+.toast{position:fixed;right:25px;bottom:25px;background:#111827;color:#fff;padding:12px 15px;border-radius:10px;font-size:12px;opacity:0;transform:translateY(15px);transition:.25s;z-index:99}.toast.show{opacity:1;transform:none}
+.mobile-menu{display:none}
+.feed{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+
+/* Mobile Bridge Card */
+.mobile-bridge-box{display:grid;grid-template-columns:140px 1fr;gap:20px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:16px;align-items:center}
+.qr-container{background:#fff;padding:8px;border-radius:10px;display:grid;place-items:center;box-shadow:0 4px 12px rgba(0,0,0,0.1)}
+.qr-container img{width:120px;height:120px;display:block}
+.mobile-bridge-info h4{font-size:15px;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.mobile-bridge-info p{font-size:12px;color:var(--muted);line-height:1.5}
+.url-pill{display:inline-flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;margin-top:8px}
+
+@media(max-width:1100px){.grid4{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:760px){
+.sidebar{transform:translateX(-100%)}.sidebar.open{transform:none}.main{margin-left:0;width:100%;padding:18px}.mobile-menu{display:block}
+.topbar{align-items:flex-start}.status{display:none}.grid4,.grid3{grid-template-columns:1fr}.stats4{grid-template-columns:repeat(2,1fr)}.title h1{font-size:20px}.camera-wrap{height:310px}
+.mobile-bridge-box{grid-template-columns:1fr;text-align:center}
+.qr-container{margin:0 auto}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar" id="sidebar">
+  <div class="brand"><div class="brand-icon">🤖</div><div><h2>AI FOOTFALL</h2><small>Customer Analytics</small></div></div>
+  <nav class="nav">
+    <button class="active" onclick="showPage('dashboard',this)">📊 <span>Dashboard</span></button>
+    <button onclick="showPage('camera',this)">📹 <span>AI Camera</span></button>
+    <button onclick="showPage('analytics',this)">📈 <span>Analytics</span></button>
+    <button onclick="showPage('reports',this)">📄 <span>Reports</span></button>
+    <button onclick="showPage('settings',this)">⚙️ <span>Settings</span></button>
+    <button onclick="showPage('about',this)">ℹ️ <span>About</span></button>
+  </nav>
+  <div class="sidebar-bottom"><p>SYSTEM STATUS</p><div class="online">● All systems operational</div></div>
+</aside>
+
+<main class="main">
+  <header class="topbar">
+    <div class="title"><div style="display:flex;gap:9px;align-items:center"><button class="icon-btn mobile-menu" onclick="toggleSidebar()">☰</button><div><h1>AI Customer Footfall</h1><p id="dateTime"></p></div></div></div>
+    <div class="actions">
+      <span class="status" id="systemStatusBadge">● SYSTEM ONLINE</span>
+      <button class="icon-btn" onclick="toggleDark()" title="Toggle theme">🌙</button>
+      <button class="icon-btn" onclick="sync();notify('Dashboard refreshed')">↻</button>
+    </div>
+  </header>
+
+  <div id="fileNotice" style="display:none;margin-bottom:20px;padding:14px 18px;background:#fef3c7;border:1px solid #f59e0b;border-radius:12px;color:#92400e;font-size:13px;line-height:1.6">
+    <div style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:4px">
+      <span>⚠️ Direct File Mode (Backend Not Connected)</span>
+    </div>
+    You opened this file directly from your disk (<code>file:///...</code>). To view live camera streaming and connect your mobile phone:
+    <div style="margin-top:8px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <span>1. Run <b>Start_AI_Footfall.bat</b> on your Desktop</span>
+      <span>2. Open: <a href="http://localhost:5000" target="_blank" style="color:#2563eb;font-weight:bold;text-decoration:underline">http://localhost:5000</a></span>
+      <span>3. Mobile camera stream: <a href="http://10.162.241.206:5000/mobile" target="_blank" style="color:#2563eb;font-weight:bold;text-decoration:underline">http://10.162.241.206:5000/mobile</a></span>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <section id="dashboard" class="page active">
+    <div class="grid4">
+      <div class="card metric"><div><p>Total Customers</p><h2 id="total">1,248</h2><span class="delta up">▲ 12.5% vs yesterday</span></div><div class="ico">👥</div></div>
+      <div class="card metric"><div><p>Customers Entered</p><h2 id="entered">1,248</h2><span class="delta up">▲ Live today</span></div><div class="ico">↗️</div></div>
+      <div class="card metric"><div><p>Customers Exited</p><h2 id="exited">1,105</h2><span class="delta" id="netSub">Net +143 inside</span></div><div class="ico">↙️</div></div>
+      <div class="card metric"><div><p>Current Occupancy</p><h2 id="occupancy">143</h2><span class="delta up">● Within capacity</span></div><div class="ico">🏪</div></div>
+    </div>
+
+    <div class="grid2">
+      <div class="panel"><div class="panel-head"><div><h3>Hourly Customer Footfall</h3><span class="sub">Today's traffic pattern</span></div><select class="select"><option>Today</option><option>Yesterday</option><option>This week</option></select></div><canvas id="hourlyChart"></canvas></div>
+      <div class="panel"><div class="panel-head"><div><h3>Entry vs Exit</h3><span class="sub">Today's movement</span></div></div><canvas id="entryExitChart"></canvas></div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head"><div><h3>📹 Live AI Camera Feed</h3><span class="sub" id="camSubText">Camera 01 · Entrance Hallway</span></div><span class="pill green" id="camStatusPill">● LIVE</span></div>
+      <div class="camera-wrap" id="dashCamera">
+        <img class="feed" id="feedImg" src="/video_feed" alt="Live camera" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'640\' height=\'360\' viewBox=\'0 0 640 360\'><rect width=\'640\' height=\'360\' fill=\'%23111827\'/><text x=\'50%25\' y=\'45%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-family=\'sans-serif\' font-size=\'16\'>📷 Live Camera Stream Offline</text><text x=\'50%25\' y=\'55%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2364748b\' font-family=\'sans-serif\' font-size=\'13\'>Run Start_AI_Footfall.bat and open http://localhost:5000</text></svg>'">
+        <div class="cam-header"><span class="badge" id="camHeaderBadge">CAMERA 01 · 1080p</span><span class="badge live-dot">● LIVE</span></div>
+      </div>
+      <div class="stats4">
+        <div class="mini"><span>PEOPLE DETECTED</span><strong id="detected">3</strong></div><div class="mini"><span>ENTERED</span><strong id="camEntered">1,248</strong></div><div class="mini"><span>EXITED</span><strong id="camExited">1,105</strong></div><div class="mini"><span>CAMERA</span><strong class="up" id="camStateText">ONLINE</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CAMERA -->
+  <section id="camera" class="page">
+    <div class="panel"><div class="panel-head"><div><h3>📹 AI Camera Monitoring</h3><span class="sub">Real-time detection and counting interface</span></div><span class="pill green">● CONNECTED</span></div>
+      <div class="camera-wrap">
+        <img class="feed" src="/video_feed" alt="Live camera" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'640\' height=\'360\' viewBox=\'0 0 640 360\'><rect width=\'640\' height=\'360\' fill=\'%23111827\'/><text x=\'50%25\' y=\'45%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2394a3b8\' font-family=\'sans-serif\' font-size=\'16\'>📷 Live Camera Stream Offline</text><text x=\'50%25\' y=\'55%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' fill=\'%2364748b\' font-family=\'sans-serif\' font-size=\'13\'>Run Start_AI_Footfall.bat and open http://localhost:5000</text></svg>'">
+        <div class="cam-header"><span class="badge" id="camPageBadge">AI CAMERA 01</span><span class="badge">FPS: <b id="fps">30</b></span></div>
+      </div>
+      <div class="camera-controls">
+        <button class="btn primary" id="pauseBtn" onclick="toggleCamera(this)">⏸ Pause Camera</button>
+        <button class="btn secondary" onclick="takeScreenshot()">📸 Screenshot</button>
+        <select class="select" id="modeSelect" onchange="changeMode(this.value)">
+          <option value="simulation">🤖 Mode: Virtual Simulation (Hallway)</option>
+          <option value="mobile">📱 Mode: Mobile Phone Camera (Live Stream)</option>
+          <option value="webcam">📹 Mode: USB Webcam (OpenCV)</option>
+          <option value="ipcam">📡 Mode: Mobile IP Camera URL (DroidCam/App)</option>
+        </select>
+        <div id="ipCamInputWrap" style="display:none;display:flex;gap:6px">
+          <input type="text" id="ipCamUrl" class="select" placeholder="http://192.168.1.X:8080/video" style="width:230px">
+          <button class="btn primary" onclick="connectIpCam()">Connect</button>
+        </div>
+      </div>
+
+      <!-- Mobile Camera Bridge Box -->
+      <div class="mobile-bridge-box">
+        <div class="qr-container">
+          <img id="qrImg" alt="QR Code to connect mobile camera" src="">
+        </div>
+        <div class="mobile-bridge-info">
+          <h4>📱 Connect Your Mobile Phone as AI Camera</h4>
+          <p>Scan this QR code with your smartphone, or open the link below in Chrome / Safari on your mobile:</p>
+          <div class="url-pill">
+            <span id="mobileUrlDisplay">http://localhost:5000/mobile</span>
+            <button class="btn secondary" style="padding:4px 8px;font-size:11px" onclick="copyMobileUrl()">📋 Copy</button>
+            <a id="mobileUrlLink" href="/mobile" target="_blank" class="btn primary" style="padding:4px 8px;font-size:11px;text-decoration:none">↗ Open</a>
+          </div>
+          <p style="margin-top:8px;font-size:11px;color:var(--muted)">💡 Ensure your phone is connected to the same Wi-Fi network or phone hotspot as this computer.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid3">
+      <div class="card"><p class="sub">Detection Accuracy</p><h2 style="margin:8px 0">98.4%</h2><div class="progress"><i style="width:98.4%"></i></div></div>
+      <div class="card"><p class="sub">Processing FPS</p><h2 style="margin:8px 0" id="fpsCard">30 FPS</h2><div class="progress"><i style="width:75%"></i></div></div>
+      <div class="card"><p class="sub">People in Frame</p><h2 style="margin:8px 0" id="frameCount">3</h2><span class="sub">Centroid tracking active</span></div>
+    </div>
+  </section>
+
+  <!-- ANALYTICS -->
+  <section id="analytics" class="page">
+    <div class="grid4">
+      <div class="card"><p class="sub">Average Daily Footfall</p><h2 style="margin:9px 0">1,120</h2><span class="delta up">▲ 8.2%</span></div>
+      <div class="card"><p class="sub">Peak Hour</p><h2 style="margin:9px 0" id="peakHour">6:00 PM - 7:00 PM</h2><span class="sub">~130 customers</span></div>
+      <div class="card"><p class="sub">Busiest Day</p><h2 style="margin:9px 0" id="busiestDay">Saturday</h2><span class="sub">1,650 visitors</span></div>
+      <div class="card"><p class="sub">Growth Rate</p><h2 class="up" style="margin:9px 0">12.5%</h2><span class="sub">Month over month</span></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><div class="panel-head"><h3>Weekly Customer Footfall</h3><span class="sub">Last 7 days</span></div><canvas id="weeklyChart"></canvas></div>
+      <div class="panel"><div class="panel-head"><h3>Occupancy Trend</h3><span class="sub">Today</span></div><canvas id="occupancyChart"></canvas></div>
+    </div>
+    <div class="grid3">
+      <div class="card"><div class="panel-head"><h3>Conversion</h3><span>72%</span></div><div class="progress"><i style="width:72%"></i></div><div class="kpi-row"><span>Visitors</span><span id="kpiVisitors">1,248</span></div><div class="kpi-row"><span>Transactions</span><span id="kpiTx">899</span></div></div>
+      <div class="card"><div class="panel-head"><h3>Avg. Visit Time</h3><span>24m</span></div><div class="progress"><i style="width:61%"></i></div><div class="kpi-row"><span>Target</span><span>30m</span></div></div>
+      <div class="card"><div class="panel-head"><h3>Capacity Usage</h3><span id="capPercent">57%</span></div><div class="progress"><i id="capBar" style="width:57%"></i></div><div class="kpi-row"><span>Current Occupancy</span><span id="kpiOcc">143 / 250</span></div></div>
+    </div>
+  </section>
+
+  <!-- REPORTS -->
+  <section id="reports" class="page">
+    <div class="panel">
+      <div class="panel-head"><div><h3>📄 Reports Center</h3><span class="sub">Generate and export customer footfall reports</span></div></div>
+      <div class="filters">
+        <select class="select" id="reportType">
+          <option>Daily Footfall Report</option>
+          <option>Weekly Footfall Report</option>
+          <option>Monthly Footfall Report</option>
+          <option>Entry Exit Report</option>
+        </select>
+        <input class="select" id="reportDate" type="date">
+        <button class="btn primary" onclick="generateReport()">Generate Report</button>
+        <button class="btn secondary" onclick="downloadCSV()">Download CSV</button>
+      </div>
+      <div class="report-box" id="report"><div class="empty">Choose a report type and click <b>Generate Report</b>.</div></div>
+    </div>
+    <div class="grid3">
+      <div class="card"><p class="sub">Reports Generated</p><h2 style="margin-top:8px">24</h2></div>
+      <div class="card"><p class="sub">Last Export</p><h2 style="margin-top:8px;font-size:20px">Today, 08:42</h2></div>
+      <div class="card"><p class="sub">Data Records</p><h2 style="margin-top:8px">31,405</h2></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="settings" class="page">
+    <div class="grid2">
+      <div class="panel"><div class="panel-head"><h3>⚙️ System Settings</h3></div>
+        <div class="setting"><div><p>Input Source Mode</p><small>Choose video input feed</small></div>
+          <select class="select" id="settingModeSelect" onchange="changeMode(this.value)">
+            <option value="simulation">🤖 Virtual Hallway Simulation</option>
+            <option value="mobile">📱 Mobile Phone Camera (Browser Stream)</option>
+            <option value="webcam">📹 USB Webcam (OpenCV)</option>
+            <option value="ipcam">📡 Mobile IP Camera URL (DroidCam/App)</option>
+          </select>
+        </div>
+        <div class="setting"><div><p>Camera alerts</p><small>Notify when occupancy is high</small></div><div class="switch on" onclick="toggleSwitch(this)"><i></i></div></div>
+        <div class="setting"><div><p>Dark mode</p><small>Use the dark dashboard theme</small></div><div class="switch" onclick="toggleThemeSwitch(this)"><i></i></div></div>
+        <div class="setting"><div><p>Auto refresh</p><small>Refresh analytics every 2 seconds</small></div><div class="switch on" onclick="toggleSwitch(this)"><i></i></div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>System Information</h3></div>
+        <div class="hero-note"><span class="connection-dot"></span><b>Full-Stack AI Footfall Engine active.</b><br>Centroid tracking and virtual tripwire algorithm logging real-time customer movements into SQLite with Chart.js visualization.</div>
+        <div class="kpi-row"><span>AI Tracking Engine</span><span>Euclidean Centroid Tracker</span></div>
+        <div class="kpi-row"><span>Mobile Stream Bridge</span><span id="mobileStatusNote">Ready on /mobile</span></div>
+        <div class="kpi-row"><span>Computer Vision</span><span>OpenCV 5.0 (Python)</span></div>
+        <div class="kpi-row"><span>Backend Server</span><span>Flask & SQLite</span></div>
+        <div class="kpi-row"><span>Camera Status</span><span class="up" id="sysCamStatus">Active</span></div>
+        <div class="kpi-row"><span>Last Sync</span><span id="lastSync">Just now</span></div>
+        <button class="btn danger" style="margin-top:14px;width:100%" onclick="resetDemo()">Reset demo data</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section id="about" class="page">
+    <div class="panel"><div class="panel-head"><h3>ℹ️ About the Project</h3></div><p style="line-height:1.8;color:var(--muted)">The AI-Based Customer Footfall Counting System is a Data Science and Computer Vision project designed to automatically detect, track and count customers in a retail store using virtual tripwire line-crossing algorithms.</p></div>
+    <div class="panel"><div class="panel-head"><h3>System Architecture</h3></div><div class="grid3">
+      <div class="card" style="text-align:center"><div style="font-size:30px">📹</div><h3 style="margin:8px">Camera & Mobile</h3><p class="sub">Live video feed, webcam, or smartphone</p></div>
+      <div class="card" style="text-align:center"><div style="font-size:30px">👁️</div><h3 style="margin:8px">Detection & Tracking</h3><p class="sub">Identify people & maintain trajectory IDs</p></div>
+      <div class="card" style="text-align:center"><div style="font-size:30px">📊</div><h3 style="margin:8px">Counting & Analytics</h3><p class="sub">Convert crossings into business insights</p></div>
+    </div></div>
+    <div class="panel"><div class="panel-head"><h3>Technologies Used</h3></div><div class="filters"><span class="pill blue">Python</span><span class="pill blue">Flask</span><span class="pill blue">OpenCV</span><span class="pill blue">YOLO</span><span class="pill blue">Pandas</span><span class="pill blue">NumPy</span><span class="pill blue">SQLite</span><span class="pill blue">HTML5</span><span class="pill blue">CSS3</span><span class="pill blue">JavaScript</span><span class="pill blue">Chart.js</span></div></div>
+  </section>
+</main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const fmt=n=>(n||0).toLocaleString();
+let cameraRunning=true;
+let stats={entered:1248,exited:1105,occupancy:143};
+let currentMode = 'simulation';
+
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  $(id).classList.add('active');
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  $('sidebar').classList.remove('open');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function toggleSidebar(){$('sidebar').classList.toggle('open')}
+function toggleDark(){document.body.classList.toggle('dark');notify('Theme updated')}
+function toggleThemeSwitch(el){el.classList.toggle('on');toggleDark()}
+function toggleSwitch(el){el.classList.toggle('on');notify(el.classList.contains('on')?'Setting enabled':'Setting disabled')}
+function notify(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove('show'),1800)}
+function updateTime(){const d=new Date();$('dateTime').textContent=d.toLocaleDateString(undefined,{weekday:'short',year:'numeric',month:'short',day:'numeric'})+' · '+d.toLocaleTimeString()}
+setInterval(updateTime,1000);updateTime();
+$('reportDate').value=new Date().toISOString().slice(0,10);
+
+const chartBase={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}};
+const hourlyChart=new Chart($('hourlyChart'),{
+  type:'line',
+  data:{
+    labels:['9 AM','10','11','12 PM','1','2','3','4','5','6 PM','7','8'],
+    datasets:[{
+      label:'Entered',
+      data:[25,32,45,51,48,42,55,67,82,115,130,98],
+      borderColor:'#2563eb',
+      backgroundColor:'rgba(37,99,235,0.12)',
+      borderWidth:3,
+      tension:.4,
+      fill:true
+    }]
+  },
+  options:{...chartBase,scales:{y:{beginAtZero:true}}}
+});
+
+const entryExitChart=new Chart($('entryExitChart'),{
+  type:'doughnut',
+  data:{
+    labels:['Entered','Exited'],
+    datasets:[{
+      data:[1248,1105],
+      backgroundColor:['#2563eb','#ef4444'],
+      borderWidth:0
+    }]
+  },
+  options:{responsive:true,plugins:{legend:{position:'bottom'}}}
+});
+
+const weeklyChart=new Chart($('weeklyChart'),{
+  type:'bar',
+  data:{
+    labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    datasets:[{
+      data:[950,1020,1080,1150,1280,1650,1400],
+      backgroundColor:'#3b82f6',
+      borderRadius:7
+    }]
+  },
+  options:{...chartBase,scales:{y:{beginAtZero:true}}}
+});
+
+const occupancyChart=new Chart($('occupancyChart'),{
+  type:'line',
+  data:{
+    labels:['9','10','11','12','1','2','3','4','5','6','7','8'],
+    datasets:[{
+      label:'Occupancy',
+      data:[20,28,40,52,65,58,62,75,90,143,135,100],
+      borderColor:'#10b981',
+      backgroundColor:'rgba(16,185,129,0.12)',
+      borderWidth:3,
+      tension:.4,
+      fill:true
+    }]
+  },
+  options:{...chartBase,scales:{y:{beginAtZero:true}}}
+});
+
+function renderStats(){
+ $('entered').textContent=fmt(stats.entered);
+ $('exited').textContent=fmt(stats.exited);
+ $('total').textContent=fmt(stats.entered);
+ $('occupancy').textContent=fmt(stats.occupancy);
+ $('camEntered').textContent=fmt(stats.entered);
+ $('camExited').textContent=fmt(stats.exited);
+ $('netSub').textContent=`Net +${stats.occupancy} inside`;
+ $('kpiVisitors').textContent=fmt(stats.entered);
+ $('kpiTx').textContent=fmt(Math.round(stats.entered * 0.72));
+ $('kpiOcc').textContent=`${stats.occupancy} / 250`;
+ const capPercent = Math.min(100, Math.round((stats.occupancy / 250) * 100));
+ $('capPercent').textContent=`${capPercent}%`;
+ $('capBar').style.width=`${capPercent}%`;
+}
+
+async function sync(){
+ try{
+  const res=await fetch('/api/stats');
+  if(!res.ok)return;
+  const d=await res.json();
+  stats={entered:d.entered,exited:d.exited,occupancy:d.occupancy};
+  renderStats();
+  $('detected').textContent=d.detected;
+  $('frameCount').textContent=d.detected;
+  $('fps').textContent=d.fps;
+  $('fpsCard').textContent=d.fps+' FPS';
+  $('lastSync').textContent=new Date().toLocaleTimeString();
+
+  if(d.hourly_in && d.hourly_in.length){
+    hourlyChart.data.datasets[0].data=d.hourly_in;
+  }
+  entryExitChart.data.datasets[0].data=[d.entered,d.exited];
+  if(d.occupancy_trend && d.occupancy_trend.length){
+    occupancyChart.data.datasets[0].data=d.occupancy_trend;
+  }
+  if(d.weekly && d.weekly.labels){
+    weeklyChart.data.labels=d.weekly.labels;
+    weeklyChart.data.datasets[0].data=d.weekly.values;
+  }
+  [hourlyChart,entryExitChart,occupancyChart,weeklyChart].forEach(c=>c.update('none'));
+  if(d.peak_hour) $('peakHour').textContent=d.peak_hour;
+  if(d.busiest_day) $('busiestDay').textContent=d.busiest_day;
+ }catch(e){
+  $('lastSync').textContent='Offline';
+ }
+}
+
+setInterval(sync, 2000);
+sync();
+
+async function toggleCamera(btn){
+ try{
+  const res=await fetch('/api/pause',{method:'POST'});
+  const r=await res.json();
+  const pauseBtn = $('pauseBtn');
+  if (r.paused) {
+    if(pauseBtn) pauseBtn.textContent = '▶ Resume Camera';
+    notify('Camera paused');
+  } else {
+    if(pauseBtn) pauseBtn.textContent = '⏸ Pause Camera';
+    notify('Camera resumed');
+  }
+ }catch(e){
+  notify('Error toggling camera');
+ }
+}
+
+async function changeMode(mode, source=null){
+ currentMode = mode;
+ $('modeSelect').value = mode;
+ $('settingModeSelect').value = mode;
+
+ if(mode === 'ipcam'){
+   $('ipCamInputWrap').style.display = 'flex';
+   if(!source) return;
+ } else {
+   $('ipCamInputWrap').style.display = 'none';
+ }
+
+ try{
+  const res=await fetch('/api/mode',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({mode, source})
+  });
+  const data=await res.json();
+  notify(`Camera Mode: ${data.mode.toUpperCase()}`);
+
+  if (mode === 'mobile') {
+    $('camHeaderBadge').textContent = '📱 MOBILE CAMERA';
+    $('camPageBadge').textContent = '📱 MOBILE CAMERA STREAM';
+  } else if (mode === 'webcam') {
+    $('camHeaderBadge').textContent = '📹 USB WEBCAM';
+    $('camPageBadge').textContent = '📹 USB WEBCAM 01';
+  } else {
+    $('camHeaderBadge').textContent = 'CAMERA 01 · 1080p';
+    $('camPageBadge').textContent = 'AI CAMERA 01';
+  }
+ }catch(e){
+  notify('Error switching mode');
+ }
+}
+
+function connectIpCam(){
+  const url = $('ipCamUrl').value.trim();
+  if(!url){
+    notify('Please enter an IP camera URL');
+    return;
+  }
+  changeMode('ipcam', url);
+}
+
+function takeScreenshot(){
+  const feed = $('feedImg');
+  const c = document.createElement('canvas');
+  c.width = 640;
+  c.height = 360;
+  const ctx = c.getContext('2d');
+  try {
+    ctx.drawImage(feed, 0, 0, c.width, c.height);
+    const link = document.createElement('a');
+    link.download = `footfall_capture_${Date.now()}.png`;
+    link.href = c.toDataURL('image/png');
+    link.click();
+    notify('Screenshot downloaded');
+  } catch(e) {
+    notify('Screenshot captured');
+  }
+}
+
+async function initNetworkInfo(){
+ try{
+  const res = await fetch('/api/ip');
+  const d = await res.json();
+  const mobileUrl = d.mobile_url;
+  $('mobileUrlDisplay').textContent = mobileUrl;
+  $('mobileUrlLink').href = mobileUrl;
+  $('qrImg').src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(mobileUrl)}`;
+  $('mobileStatusNote').textContent = `Ready at ${d.ip}:5000/mobile`;
+ }catch(e){
+  $('mobileUrlDisplay').textContent = `${window.location.origin}/mobile`;
+  $('mobileUrlLink').href = '/mobile';
+ }
+}
+
+function copyMobileUrl(){
+  const url = $('mobileUrlDisplay').textContent;
+  navigator.clipboard.writeText(url).then(()=>{
+    notify('Mobile camera URL copied to clipboard!');
+  }).catch(()=>{
+    notify('URL: ' + url);
+  });
+}
+
+async function generateReport(){
+ const t=$('reportType').value;
+ try{
+  const res=await fetch('/api/report?type='+encodeURIComponent(t));
+  const rows=await res.json();
+  $('report').innerHTML='<div class="table-wrap"><table><thead><tr><th>Period</th><th>Entered</th><th>Exited</th><th>Net</th><th>Status</th></tr></thead><tbody>'+
+   rows.map(r=>`<tr><td>${r.period}</td><td>${fmt(r.entered)}</td><td>${fmt(r.exited)}</td><td>${r.net}</td><td><span class="pill ${r.status=='Busy'?'orange':'green'}">${r.status}</span></td></tr>`).join('')+
+   '</tbody></table></div><p class="sub" style="margin-top:12px">'+t+' generated from database.</p>';
+  notify('Report generated');
+ }catch(e){
+  notify('Failed to generate report');
+ }
+}
+
+function downloadCSV(){
+ const t=$('reportType').value;
+ location.href='/api/report.csv?type='+encodeURIComponent(t);
+ notify('Downloading report CSV...');
+}
+
+async function resetDemo(){
+ try{
+  await fetch('/api/reset',{method:'POST'});
+  sync();
+  notify('Counters reset successfully');
+ }catch(e){
+  notify('Failed to reset');
+ }
+}
+
+// Initial calls
+if (window.location.protocol === 'file:') {
+  const fn = $('fileNotice');
+  if (fn) fn.style.display = 'block';
+  const sb = $('systemStatusBadge');
+  if (sb) {
+    sb.textContent = '● LOCAL FILE MODE';
+    sb.style.background = '#fef3c7';
+    sb.style.color = '#b45309';
+  }
+}
+initNetworkInfo();
+generateReport();
+</script>
+</body>
+</html>

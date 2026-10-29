@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI Footfall — Mobile Camera Streamer</title>
+<style>
+:root {
+  --primary: #2563eb;
+  --primary-glow: rgba(37, 99, 235, 0.4);
+  --bg: #0b1120;
+  --surface: #111827;
+  --surface2: #1e293b;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --green: #22c55e;
+  --red: #ef4444;
+  --border: #334155;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+}
+header {
+  padding: 14px 18px;
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+}
+.brand h1 { font-size: 16px; font-weight: 700; }
+.brand p { font-size: 11px; color: var(--muted); }
+.nav-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  background: rgba(37, 99, 235, 0.12);
+  border-radius: 8px;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+/* Video viewport */
+.camera-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4/3;
+  max-height: 52vh;
+  background: #000;
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+}
+#video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+#canvas { display: none; }
+
+/* Camera overlay guidelines */
+.overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 12px;
+}
+.overlay-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.badge {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(6px);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+.dot.live {
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.9); }
+}
+
+/* Tripwire Guideline */
+.tripwire {
+  position: absolute;
+  top: 62%;
+  left: 5%;
+  right: 5%;
+  border-top: 2px dashed #f43f5e;
+  pointer-events: none;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.6);
+}
+.tripwire span {
+  position: absolute;
+  right: 0;
+  top: -18px;
+  background: rgba(244, 63, 94, 0.85);
+  color: #fff;
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Viewfinder corners */
+.corner {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-color: rgba(255, 255, 255, 0.5);
+  border-style: solid;
+}
+.tl { top: 12px; left: 12px; border-width: 2px 0 0 2px; }
+.tr { top: 12px; right: 12px; border-width: 2px 2px 0 0; }
+.bl { bottom: 12px; left: 12px; border-width: 0 0 2px 2px; }
+.br { bottom: 12px; right: 12px; border-width: 0 2px 2px 0; }
+
+/* Metrics Panel */
+.content {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+}
+.stat-card p {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.stat-card h3 {
+  font-size: 22px;
+  margin-top: 4px;
+  font-weight: 700;
+}
+.stat-card.blue h3 { color: #60a5fa; }
+.stat-card.green h3 { color: #4ade80; }
+.stat-card.red h3 { color: #f87171; }
+
+/* Control Buttons */
+.controls-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.btn {
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 0.15s, opacity 0.15s;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  grid-column: span 2;
+  box-shadow: 0 4px 14px var(--primary-glow);
+}
+.btn-danger {
+  background: #dc2626;
+  color: #fff;
+  grid-column: span 2;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4);
+}
+.btn-secondary {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+/* Instructions Card */
+.guide-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.guide-card b { color: var(--text); }
+.guide-card ol { margin-left: 18px; margin-top: 6px; }
+
+/* Toast alert */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(30px);
+  background: #1e293b;
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.25s;
+  z-index: 100;
+}
+.toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-icon">📱</div>
+    <div>
+      <h1>Mobile AI Camera</h1>
+      <p>Customer Footfall Sensor</p>
+    </div>
+  </div>
+  <a href="/" class="nav-link">🖥️ Dashboard</a>
+</header>
+
+<div class="camera-container">
+  <video id="video" playsinline autoplay muted></video>
+  <canvas id="canvas"></canvas>
+
+  <div class="overlay">
+    <div class="overlay-top">
+      <div class="badge"><span class="dot" id="streamDot"></span><span id="streamStatus">Standby</span></div>
+      <div class="badge"><span id="fpsCounter">0 FPS</span></div>
+    </div>
+
+    <!-- Virtual Counting Tripwire Alignment Guideline -->
+    <div class="tripwire">
+      <span>◄ Counting Tripwire ►</span>
+    </div>
+
+    <div class="corner tl"></div>
+    <div class="corner tr"></div>
+    <div class="corner bl"></div>
+    <div class="corner br"></div>
+  </div>
+</div>
+
+<main class="content">
+  <!-- Live Counters -->
+  <div class="stats-grid">
+    <div class="stat-card green">
+      <p>Entered</p>
+      <h3 id="statEntered">0</h3>
+    </div>
+    <div class="stat-card red">
+      <p>Exited</p>
+      <h3 id="statExited">0</h3>
+    </div>
+    <div class="stat-card blue">
+      <p>Occupancy</p>
+      <h3 id="statOccupancy">0</h3>
+    </div>
+  </div>
+
+  <!-- Streaming Controls -->
+  <div class="controls-grid">
+    <button class="btn btn-primary" id="btnToggle" onclick="toggleStreaming()">
+      📹 Start Mobile Camera
+    </button>
+    <button class="btn btn-secondary" onclick="switchCamera()">
+      🔄 Flip Camera
+    </button>
+    <button class="btn btn-secondary" onclick="toggleTorch()">
+      💡 Flashlight
+    </button>
+  </div>
+
+  <!-- Alignment Guidelines -->
+  <div class="guide-card">
+    <b>📐 How to Position Your Phone:</b>
+    <ol>
+      <li>Mount or hold your phone facing the store doorway or hallway.</li>
+      <li>Align the red <b>dashed tripwire line</b> across the walking threshold.</li>
+      <li>People walking downward across the line will be counted as <b>Entered</b>.</li>
+      <li>People walking upward across the line will be counted as <b>Exited</b>.</li>
+    </ol>
+  </div>
+
+  <!-- Browser Security / Camera Permission Help -->
+  <div id="permissionNotice" style="display:none;background:#261818;border:1px solid #7f1d1d;border-radius:12px;padding:14px;font-size:12px;line-height:1.6">
+    <b style="color:#f87171">🔒 Camera Blocked by Mobile Browser?</b>
+    <p style="margin-top:4px">Mobile Chrome/Safari restricts camera access on local IP addresses unless allowed:</p>
+    <div style="background:#111827;padding:10px;border-radius:8px;margin:8px 0;font-family:monospace;font-size:11px;color:#93c5fd">
+      1. Open Chrome on this phone & go to: <b>chrome://flags</b><br>
+      2. Search: <b>unsafely-treat-insecure-origin-as-secure</b><br>
+      3. Set to <b>Enabled</b> and enter: <b>http://{{ local_ip }}:5000</b><br>
+      4. Tap Relaunch Chrome. Done!
+    </div>
+    <p style="margin-top:4px"><b>Alternate 1-Minute Method:</b> Install the free <b>IP Webcam</b> app (Android) or <b>DroidCam</b>, start server, and enter the phone's URL on the PC dashboard!</p>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const streamDot = document.getElementById('streamDot');
+const streamStatus = document.getElementById('streamStatus');
+const fpsCounter = document.getElementById('fpsCounter');
+const btnToggle = document.getElementById('btnToggle');
+
+let isStreaming = false;
+let currentFacingMode = 'environment'; // Rear camera by default
+let mediaStream = null;
+let streamInterval = null;
+let frameCount = 0;
+let lastFpsTime = Date.now();
+let torchOn = false;
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window.toastTimer);
+  window.toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+async function startCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    document.getElementById('permissionNotice').style.display = 'block';
+    showToast('Browser requires insecure origin flag in Chrome');
+    return;
+  }
+  try {
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(track => track.stop());
+    }
+
+    const constraints = {
+      video: {
+        facingMode: { ideal: currentFacingMode },
+        width: { ideal: 640 },
+        height: { ideal: 480 }
+      },
+      audio: false
+    };
+
+    mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = mediaStream;
+    await video.play();
+
+    isStreaming = true;
+    btnToggle.textContent = '⏹ Stop Streaming';
+    btnToggle.className = 'btn btn-danger';
+    streamDot.className = 'dot live';
+    streamStatus.textContent = 'STREAMING LIVE';
+    showToast('Mobile camera connected & streaming');
+
+    // Notify backend to switch mode to mobile
+    fetch('/api/mode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'mobile' })
+    }).catch(() => {});
+
+    // Start frame upload loop (~12-15 FPS for smooth CV tracking with low network overhead)
+    clearInterval(streamInterval);
+    streamInterval = setInterval(sendFrame, 75);
+
+  } catch (err) {
+    console.error('Camera access error:', err);
+    showToast('Camera error: ' + (err.message || 'Permission denied'));
+    stopStreaming();
+  }
+}
+
+function stopStreaming() {
+  isStreaming = false;
+  clearInterval(streamInterval);
+
+  if (mediaStream) {
+    mediaStream.getTracks().forEach(track => track.stop());
+    mediaStream = null;
+  }
+
+  btnToggle.textContent = '📹 Start Mobile Camera';
+  btnToggle.className = 'btn btn-primary';
+  streamDot.className = 'dot';
+  streamStatus.textContent = 'Paused';
+  fpsCounter.textContent = '0 FPS';
+  showToast('Camera stopped');
+}
+
+function toggleStreaming() {
+  if (isStreaming) {
+    stopStreaming();
+  } else {
+    startCamera();
+  }
+}
+
+async function switchCamera() {
+  currentFacingMode = (currentFacingMode === 'environment') ? 'user' : 'environment';
+  showToast('Switched to ' + (currentFacingMode === 'environment' ? 'Back' : 'Front') + ' camera');
+  if (isStreaming) {
+    await startCamera();
+  }
+}
+
+async function toggleTorch() {
+  if (!mediaStream) return;
+  const track = mediaStream.getVideoTracks()[0];
+  if (!track) return;
+  try {
+    torchOn = !torchOn;
+    await track.applyConstraints({
+      advanced: [{ torch: torchOn }]
+    });
+    showToast(torchOn ? 'Torch On' : 'Torch Off');
+  } catch (e) {
+    showToast('Flashlight not supported on this camera');
+  }
+}
+
+function sendFrame() {
+  if (!isStreaming || video.readyState < 2) return;
+
+  canvas.width = 480;
+  canvas.height = 360;
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  canvas.toBlob(blob => {
+    if (!blob) return;
+
+    fetch('/api/upload_frame', {
+      method: 'POST',
+      headers: { 'Content-Type': 'image/jpeg' },
+      body: blob
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'success') {
+        document.getElementById('statEntered').textContent = Number(data.entered).toLocaleString();
+        document.getElementById('statExited').textContent = Number(data.exited).toLocaleString();
+        document.getElementById('statOccupancy').textContent = Number(data.occupancy).toLocaleString();
+      }
+    })
+    .catch(() => {});
+
+    // FPS calculation
+    frameCount++;
+    const now = Date.now();
+    if (now - lastFpsTime >= 1000) {
+      fpsCounter.textContent = frameCount + ' FPS';
+      frameCount = 0;
+      lastFpsTime = now;
+    }
+  }, 'image/jpeg', 0.68);
+}
+
+// Auto start if user opened the page
+window.addEventListener('load', () => {
+  // Check if camera permission is already granted or ask user on tap
+  btnToggle.focus();
+});
+</script>
+</body>
+</html>
